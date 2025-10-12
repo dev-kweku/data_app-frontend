@@ -82,6 +82,24 @@
 
         return response.json();
     }
+
+      // get admin balance from tpp api/ backend api
+    async getTPPBalance():Promise<{balance:number}>{
+        const response=await fetch(`${this.baseUrl}/tpp/balance`,{
+            method:`GET`,
+            headers:tokenService.getAuthHeaders(),
+        });
+        if(!response.ok){
+            const error=await response.json().catch(()=>({}));
+            throw new Error(error.message||'Failed to fetch TPP balance')
+        }
+
+        return response.json()
+        }
     }
 
+
+
+
     export const adminApi = new AdminApi();
+

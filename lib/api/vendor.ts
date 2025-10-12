@@ -98,7 +98,7 @@
         return data.balance
     }
 
-    // ✅ Get Transaction History
+    // Get Transaction History
     async getTransactions(): Promise<Transaction[]> {
         const response = await fetch(`${this.baseUrl}/transactions`, {
         method: 'GET',

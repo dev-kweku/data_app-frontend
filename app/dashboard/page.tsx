@@ -1,53 +1,47 @@
-    "use client"
+"use client"
 
-    import { useEffect, useState } from "react"
-    import { useRouter } from "next/navigation"
-    import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-    import { DashboardCard } from "@/components/shared/dashboard-card"
-    import { TransactionTable } from "@/components/shared/transaction-table"
-    import { TransactionChart } from "@/components/charts/transaction-chart"
-    import { NetworkVolumeChart } from "@/components/charts/network-volume-chart"
-    import { adminApi } from "@/lib/api/admin"
-    import { vendorApi } from "@/lib/api/vendor"
-    import { walletApi } from "@/lib/api/wallet"
-    import { tokenService } from "@/lib/utils/token"
-    import { User, Transaction } from "@/types"
-    import { 
-    DollarSign, 
-    Users, 
-    TrendingUp, 
-    Smartphone,
-    AlertCircle
-    } from "lucide-react"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { DashboardCard } from "@/components/shared/dashboard-card"
+import { TransactionTable } from "@/components/shared/transaction-table"
+import { TransactionChart } from "@/components/charts/transaction-chart"
+import { NetworkVolumeChart } from "@/components/charts/network-volume-chart"
+import { adminApi } from "@/lib/api/admin"
+import { vendorApi } from "@/lib/api/vendor"
+import { walletApi } from "@/lib/api/wallet"
+import { tokenService } from "@/lib/utils/token"
+import { User, Transaction } from "@/types"
+import { DollarSign, Users, TrendingUp, Smartphone, AlertCircle } from "lucide-react"
 
-    // Helper function to get user from storage
-    const getUserFromStorage = (): User | null => {
+const getUserFromStorage = (): User | null => {
     if (typeof window === 'undefined') return null
-    
     try {
-        const userData = localStorage.getItem('userData')
-        if (userData) {
-        return JSON.parse(userData)
-        }
+    const userData = localStorage.getItem('userData')
+    return userData ? JSON.parse(userData) : null
     } catch (error) {
-        console.error('Error reading user data from storage:', error)
-    }
+    console.error('Error reading user data:', error)
     return null
     }
+}
 
-    export default function DashboardPage() {
+export default function DashboardPage() {
     const router = useRouter()
     const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+
+
+    const [tppBalance, setTppBalance] = useState<number | null>(null)
+
     const [dashboardData, setDashboardData] = useState({
-        totalBalance: 0,
-        subVendors: 0,
-        monthlyTransactions: 0,
-        todayTransactions: 0,
-        todayCommissions: 0,
-        walletBalance: 0,
-        recentTransactions: [] as Transaction[]
+    totalBalance: 0,
+    subVendors: 0,
+    monthlyTransactions: 0,
+    todayTransactions: 0,
+    todayCommissions: 0,
+    walletBalance: 0,
+    recentTransactions: [] as Transaction[]
     })
 
     useEffect(() => {
@@ -65,89 +59,90 @@
     const fetchData = async (user: User) => {
         try {
         if (user.role === 'ADMIN') {
-            // For admin, fetch vendors and transactions
-            const [vendorsResponse, transactionsResponse] = await Promise.all([
+            // 🔹 Fetch TPP balance, vendors, and transactions in parallel
+            const [vendorsResponse, transactionsResponse, tppResp] = await Promise.all([
             adminApi.getVendors(),
-            adminApi.getTransactions()
-            ])
+            adminApi.getTransactions(),
+          adminApi.getTPPBalance().catch(() => ({ balance: 0 })) // fallback if API fails
+        ])
 
-            // Extract arrays from responses
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const vendors = (vendorsResponse as any).vendors || vendorsResponse
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const transactions = (transactionsResponse as any).transactions || transactionsResponse
+        setTppBalance(tppResp.balance || 0)
 
-            const recentTransactions = Array.isArray(transactions) ? transactions.slice(0, 10) : []
-            const todayTransactions = Array.isArray(transactions) ? transactions.filter(
-            t => new Date(t.createdAt).toDateString() === new Date().toDateString()
-            ).length : 0
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const vendors = (vendorsResponse as any).vendors || vendorsResponse
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const transactions = (transactionsResponse as any).transactions || transactionsResponse
+
+        const recentTransactions = Array.isArray(transactions) ? transactions.slice(0, 10) : []
+        const todayTransactions = Array.isArray(transactions)
+            ? transactions.filter(t => new Date(t.createdAt).toDateString() === new Date().toDateString()).length
+            : 0
 
             setDashboardData({
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            totalBalance: Array.isArray(vendors) ? vendors.reduce((sum: number, vendor: any) => sum + (vendor.balance || 0), 0) : 0,
+            totalBalance: Array.isArray(vendors)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ? vendors.reduce((sum: number, v: any) => sum + (v.balance || 0), 0)
+                : 0,
             subVendors: Array.isArray(vendors) ? vendors.length : 0,
             monthlyTransactions: Array.isArray(transactions) ? transactions.length : 0,
             todayTransactions,
-            todayCommissions: todayTransactions * 5, // Mock commission calculation
+            todayCommissions: todayTransactions * 5,
             walletBalance: 0,
             recentTransactions
-            })
-
-        } else if (user.role === 'VENDOR') {
+        })
+        } 
+        else if (user.role === 'VENDOR') {
             const [walletResponse, transactionsResponse] = await Promise.all([
             vendorApi.getWalletBalance(),
             vendorApi.getTransactions()
-            ])
+        ])
 
-            // Extract arrays from responses
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const walletBalance = typeof walletResponse === 'object' ? (walletResponse as any).balance : walletResponse
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const transactions = (transactionsResponse as any).transactions || transactionsResponse
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const walletBalance = (walletResponse as any)?.balance || 0
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const transactions = (transactionsResponse as any).transactions || transactionsResponse
 
-            const recentTransactions = Array.isArray(transactions) ? transactions.slice(0, 5) : []
-            const todayTransactions = Array.isArray(transactions) ? transactions.filter(
-            t => new Date(t.createdAt).toDateString() === new Date().toDateString()
-            ).length : 0
+        const recentTransactions = Array.isArray(transactions) ? transactions.slice(0, 5) : []
+        const todayTransactions = Array.isArray(transactions)
+            ? transactions.filter(t => new Date(t.createdAt).toDateString() === new Date().toDateString()).length
+            : 0
 
-            setDashboardData({
+        setDashboardData({
             totalBalance: 0,
             subVendors: 0,
             monthlyTransactions: Array.isArray(transactions) ? transactions.length : 0,
             todayTransactions,
             todayCommissions: 0,
-            walletBalance: walletBalance || 0,
+            walletBalance,
             recentTransactions
             })
-
-        } else if (user.role === 'USER') {
+        } 
+        else if (user.role === 'USER') {
             const [walletResponse, transactionsResponse] = await Promise.all([
             walletApi.getBalance(),
             walletApi.getTransactions()
-            ])
+        ])
 
-            // Extract arrays from responses
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const walletBalance = typeof walletResponse === 'object' ? (walletResponse as any).balance : walletResponse
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const transactions = (transactionsResponse as any).transactions || transactionsResponse
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const walletBalance = (walletResponse as any)?.balance || 0
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const transactions = (transactionsResponse as any).transactions || transactionsResponse
 
-            const recentTransactions = Array.isArray(transactions) ? transactions.slice(0, 5) : []
-            const todayTransactions = Array.isArray(transactions) ? transactions.filter(
-            t => new Date(t.createdAt).toDateString() === new Date().toDateString()
-            ).length : 0
+        const recentTransactions = Array.isArray(transactions) ? transactions.slice(0, 5) : []
+        const todayTransactions = Array.isArray(transactions)
+            ? transactions.filter(t => new Date(t.createdAt).toDateString() === new Date().toDateString()).length
+            : 0
 
-            setDashboardData({
+        setDashboardData({
             totalBalance: 0,
             subVendors: 0,
             monthlyTransactions: Array.isArray(transactions) ? transactions.length : 0,
             todayTransactions,
             todayCommissions: 0,
-            walletBalance: walletBalance || 0,
+            walletBalance,
             recentTransactions
-            })
+        })
         }
-
         } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data')
         } finally {
@@ -177,7 +172,7 @@
     if (!user) return null
 
     return (
-        <div className="space-y-6">
+    <div className="space-y-6">
         <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
@@ -185,12 +180,11 @@
             </p>
         </div>
 
-        {/* Role-specific dashboard content */}
         {user.role === 'ADMIN' && (
             <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 <DashboardCard
-                title="Total Balance"
+                title="Total Vendor Balance"
                 value={`GHS${dashboardData.totalBalance.toLocaleString()}`}
                 description="+10% vs last month"
                 icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
@@ -209,41 +203,42 @@
                 description="+15% vs last month"
                 icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
                 trend={{ value: "15%", isPositive: true }}
-                />
-                <DashboardCard
-                title="Today's Performance"
+            />
+            <DashboardCard
+                title="Today's Transactions"
                 value={dashboardData.todayTransactions.toString()}
                 description="+8% vs yesterday"
                 icon={<Smartphone className="h-4 w-4 text-muted-foreground" />}
                 trend={{ value: "8%", isPositive: true }}
                 />
+            {/* 🔹 Added TPP Balance Card */}
+            <DashboardCard
+                title="TPP Wallet Balance"
+                value={tppBalance !== null ? `GHS${tppBalance.toFixed(2)}` : "Loading..."}
+                description={tppBalance !== null && tppBalance < 100 ? "⚠️ Low balance!" : ""}
+                icon={<DollarSign className="h-4 w-4 text-yellow-500" />}
+                trend={{ value: "", isPositive: !!(tppBalance && tppBalance >= 100) }}
+                />
+
             </div>
 
+            {/* Existing Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>
-                <CardHeader>
-                    <CardTitle>Transaction Trends</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <TransactionChart />
-                </CardContent>
+                <CardHeader><CardTitle>Transaction Trends</CardTitle></CardHeader>
+                <CardContent><TransactionChart /></CardContent>
                 </Card>
 
                 <Card>
-                <CardHeader>
-                    <CardTitle>Network Volume Distribution</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <NetworkVolumeChart />
-                </CardContent>
+                <CardHeader><CardTitle>Network Volume Distribution</CardTitle></CardHeader>
+                <CardContent><NetworkVolumeChart /></CardContent>
                 </Card>
             </div>
 
+            {/* Recent Transactions */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                 <Card>
-                <CardHeader>
-                    <CardTitle>Today&apos;s Performance</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle>Today&apos;s Performance</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex justify-between items-center">
                     <span>Total Transactions</span>
@@ -257,9 +252,7 @@
                 </Card>
 
                 <Card>
-                <CardHeader>
-                    <CardTitle>Recent Transactions</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle>Recent Transactions</CardTitle></CardHeader>
                 <CardContent>
                     <TransactionTable transactions={dashboardData.recentTransactions} pageSize={5} />
                 </CardContent>
