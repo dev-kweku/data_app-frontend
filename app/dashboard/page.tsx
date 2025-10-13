@@ -211,11 +211,19 @@ export default function DashboardPage() {
                 icon={<Smartphone className="h-4 w-4 text-muted-foreground" />}
                 trend={{ value: "8%", isPositive: true }}
                 />
-            {/* 🔹 Added TPP Balance Card */}
+            {/*  Added TPP Balance Card */}
             <DashboardCard
-                title="TPP Wallet Balance"
-                value={tppBalance !== null ? `GHS${tppBalance.toFixed(2)}` : "Loading..."}
-                description={tppBalance !== null && tppBalance < 100 ? "⚠️ Low balance!" : ""}
+                        title="TPP Wallet Balance"
+                        value={
+                            tppBalance !== null
+                            ? `GHS ${tppBalance.toFixed(2)}`
+                            : "Loading..."
+                        }
+                        description={
+                            tppBalance !== null && tppBalance < 100
+                            ? "⚠️ Low balance!"
+                            : ""
+                        }
                 icon={<DollarSign className="h-4 w-4 text-yellow-500" />}
                 trend={{ value: "", isPositive: !!(tppBalance && tppBalance >= 100) }}
                 />
