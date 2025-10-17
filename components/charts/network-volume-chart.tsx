@@ -1,68 +1,148 @@
-    "use client"
+    "use client";
 
-    import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, PieLabelRenderProps } from 'recharts'
+    import { useEffect, useState } from "react";
+    import {
+    PieChart,
+    Pie,
+    Cell,
+    ResponsiveContainer,
+    Tooltip,
+    Legend,
+    PieLabelRenderProps,
+    } from "recharts";
+    import { adminApi } from "@/lib/api/admin";
 
     interface ChartData {
-    name: string
-    value: number
-    [key: string]: string | number
+    [key:string]:string|number;
+    name: string;
+    value: number;
+    label: string;
     }
 
-    const defaultData: ChartData[] = [
-    { name: 'MTN', value: 400 },
-    { name: 'Airtel', value: 300 },
-    { name: 'Glo', value: 200 },
-    { name: '9mobile', value: 100 },
-    ]
+    const COLORS = [
+    "#0088FE",
+    "#00C49F",
+    "#FFBB28",
+    "#FF8042",
+    "#FF6384",
+    "#36A2EB",
+    "#8A2BE2",
+    "#00CED1",
+    ];
 
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042']
+    export function NetworkVolumeChart() {
+    const [chartData, setChartData] = useState<ChartData[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    interface NetworkVolumeChartProps {
-    data?: ChartData[]
-    }
+    useEffect(() => {
+        const fetchBundles = async () => {
+        try {
+            setLoading(true);
+            setError(null);
 
-    export function NetworkVolumeChart({ data = defaultData }: NetworkVolumeChartProps) {
-    const chartData = data.length > 0 ? data : defaultData
+            const networkIds = [1, 2, 3, 4, 5, 6];
 
-    // Properly typed label function with complete null checks
-    const renderLabel = (props: PieLabelRenderProps) => {
-        const { name, percent } = props
-        // Check if name exists and percent is a valid number
-        if (!name || percent === undefined || percent === null || typeof percent !== 'number') {
-        return null
+            const bundleResponses = await Promise.all(
+            networkIds.map(async (id) => {
+                try {
+                const res = await adminApi.getDataBundleList(id);
+                return { id, bundles: res.bundles || [] };
+                } catch {
+                return { id, bundles: [] };
+                }
+            })
+            );
+
+            const aggregated: Record<string, number> = {};
+
+            bundleResponses.forEach(({ id, bundles }) => {
+            const networkName = `Network ${id}`;
+            let total = 0;
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            bundles.forEach((bundle: any) => {
+                let value = 0;
+                if (bundle.volume) {
+                const parsed = parseFloat(bundle.volume.replace(/[^\d.]/g, ""));
+                value = isNaN(parsed) ? Number(bundle.price ?? 0) : parsed;
+                } else {
+                value = Number(bundle.price ?? 0);
+                }
+                total += value;
+            });
+
+            aggregated[networkName] = total;
+            });
+
+            const formatted: ChartData[] = Object.entries(aggregated)
+            .filter(([_, v]) => v > 0)
+            .map(([name, value]) => ({
+                name,
+                value,
+                label: `${name} (${value.toFixed(0)})`,
+            }));
+
+            setChartData(formatted);
+        } catch (err) {
+            console.error("NetworkVolumeChart error:", err);
+            setError(
+            err instanceof Error ? err.message : "Failed to load network volume data"
+            );
+        } finally {
+            setLoading(false);
         }
-        return `${name} ${(percent * 100).toFixed(0)}%`
-    }
+        };
+
+        fetchBundles();
+    }, []);
+
+    const renderLabel = (props: PieLabelRenderProps) => {
+        const { name, percent } = props;
+        if (!name || percent == null) return null;
+        return `${name} ${(percent as number * 100).toFixed(0)}%`;
+    };
+
+    if (loading) return <p className="text-sm text-gray-500">Loading chart...</p>;
+    if (error) return <p className="text-sm text-red-500">{error}</p>;
+    if (!chartData.length)
+        return <p className="text-sm text-gray-500">No data available</p>;
 
     return (
-        <div className="h-80 w-full">
+        <div className="w-full h-96 bg-card rounded-2xl shadow-md p-4">
+        <h2 className="text-lg font-semibold mb-4 text-center">
+            Network Data Volume (Admin)
+        </h2>
         <ResponsiveContainer width="100%" height="100%">
             <PieChart>
             <Pie
                 data={chartData}
                 cx="50%"
                 cy="50%"
+                outerRadius={100}
                 labelLine={false}
                 label={renderLabel}
-                outerRadius={80}
-                fill="#8884d8"
                 dataKey="value"
+
             >
                 {chartData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
             </Pie>
-            <Tooltip 
-                formatter={(value: number) => [`${value} transactions`, 'Volume']}
-                contentStyle={{ 
-                backgroundColor: 'hsl(var(--background))',
-                borderColor: 'hsl(var(--border))',
-                borderRadius: '8px'
+            <Tooltip
+                formatter={(value: number, _name, props) => [
+                `${value.toLocaleString()} total`,
+                props?.payload?.name || "Network",
+                ]}
+                contentStyle={{
+                backgroundColor: "hsl(var(--background))",
+                borderColor: "hsl(var(--border))",
+                borderRadius: 8,
                 }}
             />
-            <Legend />
+            <Legend verticalAlign="bottom" height={36} />
             </PieChart>
         </ResponsiveContainer>
         </div>
-    )
+    );
     }

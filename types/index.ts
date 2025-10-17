@@ -43,6 +43,7 @@
         bundlePlanId?: string;
         status: 'PENDING' | 'SUCCESS' | 'FAILED';
         createdAt: string;
+        vendorPays?: number; 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         apiResponse?: any;
     }
@@ -81,3 +82,17 @@
         message: string;
         reference?: string;
     }
+
+
+
+    export interface DataBundle {
+        planId: string | number;
+        name: string;
+        price: number;
+        amount: number;
+        validity?: string;
+        volume?: string | number;
+        networkName?: string;
+      }
+      
+      

@@ -77,7 +77,7 @@
                 <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm text-gray-600">Vendor: {vendor.email}</p>
                 <p className="text-sm text-gray-600">
-                    Current Balance: <strong>${(vendor.balance || 0).toFixed(2)}</strong>
+                    Current Balance: <strong>GHS{(vendor.balance || 0).toFixed(2)}</strong>
                 </p>
                 </div>
 
