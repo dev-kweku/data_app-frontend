@@ -65,6 +65,34 @@
     logout(): void {
         tokenService.removeToken();
     }
+
+    async updateProfile(profileData:Partial<{name:string;email:string,message:string,user:User}>):Promise<{message:string;user:User}>{
+        const token=tokenService.getToken();
+        if(!token) throw new Error("No authentication token found")
+            const response=await fetch(`${this.baseUrl}/profile`,{
+        method:"PUT",
+        headers:{
+            ...tokenService.getAuthHeaders(),
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify(profileData)
+        
+    });
+        const text=await response.text()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let data:any;
+        try{
+            data=JSON.parse(text)
+        }catch{
+            throw new Error("Invalid server response")
+        }
+
+        if(!response.ok){
+            throw new Error(data?.message||"Failed to update profile")
+        }
+
+        return data
+}
     }
 
     export const authApi = new AuthApi();
