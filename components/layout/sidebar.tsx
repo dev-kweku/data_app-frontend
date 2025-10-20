@@ -19,6 +19,7 @@
     interface SidebarProps {
     user: User
     onLogout: () => void
+    onLinkClick?:()=>void
     }
 
     const navigation = {
