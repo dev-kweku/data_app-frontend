@@ -40,6 +40,39 @@
         return response.json();
     }
 
+    // remove vendor
+async removeVendor(vendorId: string): Promise<{ message: string; vendorId: string }> {
+    if (!vendorId) {
+        throw new Error("vendorId is required");
+        }
+    
+        const response = await fetch(`${this.baseUrl}/vendors/${vendorId}`, {
+        method: "DELETE",
+        headers: tokenService.getAuthHeaders(),
+        });
+    
+        const text = await response.text();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let data: any;
+        try {
+        data = JSON.parse(text);
+        } catch {
+        console.error("removeVendor(): Non-JSON response:", text.slice(0, 200));
+        throw new Error("Server returned an invalid response (HTML or non-JSON).");
+        }
+    
+        if (!response.ok) {
+        const errorMsg = data?.message || `Failed to remove vendor (status ${response.status})`;
+        throw new Error(errorMsg);
+        }
+    
+        return {
+        message: data.message || "Vendor removed successfully",
+        vendorId: data.vendorId,
+        };
+    }
+    
+
     
 async fundVendor(fundData: FundVendorData): Promise<{
     status: string;
