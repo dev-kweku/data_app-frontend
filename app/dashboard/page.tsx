@@ -61,7 +61,7 @@
         
             setUser(userData)
         
-            // ✅ Avoid duplicate fetches in StrictMode
+            // Avoid duplicate fetches in StrictMode
             if (!hasFetched.current) {
             fetchData(userData)
             hasFetched.current = true
