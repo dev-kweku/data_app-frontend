@@ -12,7 +12,7 @@
     ResponsiveContainer,
     } from "recharts";
     import { vendorApi } from "@/lib/api/vendor";
-    import { walletApi } from "@/lib/api/wallet";
+    // import { walletApi } from "@/lib/api/wallet";
     import { Transaction } from "@/types";
 import { adminApi } from "@/lib/api/admin";
 
@@ -131,7 +131,7 @@ import { adminApi } from "@/lib/api/admin";
                 tick={{ fill: "currentColor" }}
             />
             <YAxis className="text-xs" tick={{ fill: "currentColor" }} />
-            <Tooltip
+            {/* <Tooltip
                 formatter={(value: number, key) => [
                 key === "transactions"
                     ? `${value} txs`
@@ -143,7 +143,26 @@ import { adminApi } from "@/lib/api/admin";
                 borderColor: "hsl(var(--border))",
                 borderRadius: "8px",
                 }}
-            />
+            /> */}
+                <Tooltip
+                    formatter={(value, key) => {
+                        const numericValue =
+                        typeof value === "number" ? value : Number(value ?? 0);
+
+                        return [
+                        key === "transactions"
+                            ? `${numericValue} txs`
+                            : `GHS ${numericValue.toFixed(2)}`,
+                        key === "transactions" ? "Transactions" : "Revenue",
+                        ];
+                    }}
+                    contentStyle={{
+                        backgroundColor: "hsl(var(--background))",
+                        borderColor: "hsl(var(--border))",
+                        borderRadius: "8px",
+                    }}
+                    />
+
             <Legend />
             <Line
                 type="monotone"
