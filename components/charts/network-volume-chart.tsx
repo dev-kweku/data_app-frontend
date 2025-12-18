@@ -129,17 +129,18 @@
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
             </Pie>
-            <Tooltip
-                formatter={(value: number, _name, props) => [
-                `${value.toLocaleString()} total`,
+                    <Tooltip
+            formatter={(value, _name, props) => {
+                const numericValue =
+                typeof value === "number" ? value : Number(value ?? 0);
+
+                return [
+                `${numericValue.toLocaleString()} total`,
                 props?.payload?.name || "Network",
-                ]}
-                contentStyle={{
-                backgroundColor: "hsl(var(--background))",
-                borderColor: "hsl(var(--border))",
-                borderRadius: 8,
-                }}
+                ];
+            }}
             />
+
             <Legend verticalAlign="bottom" height={36} />
             </PieChart>
         </ResponsiveContainer>
